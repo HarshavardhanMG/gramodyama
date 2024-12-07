@@ -1,23 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Grid, Card, Avatar, Typography, TextField, InputAdornment } from '@mui/material';
 import { Search } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { experts } from '../../data/experts';
 import '../../styles/experts.css';
+import { expertAPI } from '../../services/api';
 
 const ExpertList = () => {
   const { expertType } = useParams();
-  console.log('Expert Type:', expertType);
-  console.log('Available Experts:', experts[expertType]);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [experts, setExperts] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  const expertList = experts[expertType] || [];
+  useEffect(() => {
+    const fetchExperts = async () => {
+      try {
+        const data = await expertAPI.getAllExperts(expertType);
+        setExperts(data);
+      } catch (error) {
+        console.error('Error fetching experts:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filteredExperts = expertList.filter(expert => 
+    fetchExperts();
+  }, [expertType]);
+
+  const filteredExperts = experts.filter(expert => 
     expert.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     expert.specialization.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="expert-list-container">

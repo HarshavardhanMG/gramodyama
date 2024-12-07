@@ -1,15 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Avatar, Card, Button, Grid, Typography } from '@mui/material';
 import { Phone, Email, VideoLibrary, Article } from '@mui/icons-material';
-import { experts } from '../../data/experts';
+import { expertAPI } from '../../services/api';
 
 const ExpertProfile = () => {
   const { expertType, expertId } = useParams();
-  
-  const expert = experts[expertType]?.find(
-    exp => exp.id === parseInt(expertId)
-  );
+  const [expert, setExpert] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchExpert = async () => {
+      try {
+        const data = await expertAPI.getExpertById(expertType, expertId);
+        setExpert(data);
+      } catch (error) {
+        console.error('Error fetching expert:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExpert();
+  }, [expertType, expertId]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   if (!expert) {
     return (
@@ -46,7 +63,7 @@ const ExpertProfile = () => {
           </div>
           
           <div className="content-section">
-            <Typography variant="h6">ವಿಡಿಯೋಗಳು</Typography>
+            <Typography variant="h6">ವಿಡಿಯ��ಗಳು</Typography>
             <Grid container spacing={2}>
               {expert.videos.map(video => (
                 <Grid item xs={12} sm={6} key={video.id}>

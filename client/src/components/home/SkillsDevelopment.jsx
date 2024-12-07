@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import {
@@ -10,9 +10,10 @@ import {
     Book
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { officers, karnatakaDistricts } from '../../data/officers';
-import { experts } from '../../data/experts';
+import { karnatakaDistricts } from '../../data/officers';
 import BookingModal from '../appointments/BookingModal';
+import { officerAPI } from '../../services/api';
+import { expertAPI } from '../../services/api';
 
 const SkillsDevelopment = () => {
     const navigate = useNavigate();
@@ -23,10 +24,27 @@ const SkillsDevelopment = () => {
     const [availableOfficers, setAvailableOfficers] = useState([]);
     const [selectedOfficer, setSelectedOfficer] = useState(null);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [experts, setExperts] = useState([]);
+    const [loadingExperts, setLoadingExperts] = useState(true);
+
+    useEffect(() => {
+        const fetchExperts = async () => {
+            try {
+                const data = await expertAPI.getAllExperts('all');
+                setExperts(data);
+            } catch (error) {
+                console.error('Error fetching experts:', error);
+            } finally {
+                setLoadingExperts(false);
+            }
+        };
+
+        fetchExperts();
+    }, []);
 
     const handleExpertNavigation = (expertType) => {
         navigate(`/experts/${expertType}`);
-    };
+      };
 
     // Appointment booking related handlers
     const handleDateClick = () => {
@@ -49,16 +67,21 @@ const SkillsDevelopment = () => {
         setShowDistricts(false);
     };
 
-    const handleCheck = () => {
-        if (!selectedDate || !selectedLocation) return;
-
-        const filtered = officers.filter(officer => {
+    const handleCheck = async () => {        if (!selectedDate || !selectedLocation) return;
+      
+        try {
             const dateString = selectedDate.toISOString().split('T')[0];
-            const isDateAvailable = !officer.bookedDates.includes(dateString);
-            const locationMatch = officer.location === selectedLocation;
-            return isDateAvailable && locationMatch;
-        });
-        setAvailableOfficers(filtered);
+            console.log('Checking availability:', { dateString, selectedLocation });
+
+            const officers = await officerAPI.getAvailableOfficers(dateString, selectedLocation);
+            console.log('Officers received:', officers);
+
+            setAvailableOfficers(officers);
+            console.log('State updated:', officers.length);
+        } catch (err) {
+            console.error('Error:', err);
+            setAvailableOfficers([]);
+        }
     };
 
     const handleBookingClick = (officer) => {
@@ -122,61 +145,58 @@ const SkillsDevelopment = () => {
                         ಪರಿಶೀಲಿಸಿ
                     </button>
                 </div>
-                  {availableOfficers.length > 0 && (
-                      <div className="available-officers">
-                          {availableOfficers.map(officer => (
-                              <div key={officer.id} className="officer-card">
-                                  <h4>{officer.name}</h4>
-                                  <p>{officer.designation}</p>
-                                  <button 
-                                      className="book-btn"
-                                      onClick={() => handleBookingClick(officer)}
-                                  >
-                                      ಭೇಟಿ ಕಾದಿರಿಸಿ
-                                  </button>
-                              </div>
-                          ))}
-                      </div>
-                  )}
-                  {availableOfficers.length === 0 && selectedDate && selectedLocation && (
-                      <div className="no-officers-message">
-                          <h4>ಈ ದಿನಾಂಕ ಮತ್ತು ಸ್ಥಳದಲ್ಲಿ ಯಾವುದೇ ಅಧಿಕಾರಿಗಳು ಲಭ್ಯವಿಲ್ಲ</h4>
-                          <p>ದಯವಿಟ್ಟು ಬೇರೆ ದಿನಾಂಕ ಅಥವಾ ಸ್ಥಳವನ್ನು ಆಯ್ಕೆ ಮಾಡಿ</p>
-                      </div>
-                  )}
-
-              </section>
+                {availableOfficers.length > 0 && (
+                    <div className="available-officers">
+                        {availableOfficers.map(officer => (
+                            <div key={officer._id} className="officer-card">
+                                <h4>{officer.name}</h4>
+                                <p>{officer.designation}</p>
+                                <button 
+                                    className="book-btn"
+                                    onClick={() => handleBookingClick(officer)}
+                                >
+                                    ಭೇಟಿ ಕಾದಿರಿಸಿ
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {availableOfficers.length === 0 && selectedDate && selectedLocation && (
+                    <div className="no-officers-message">
+                        <h4>ಈ ದಿನಾಂಕ ಮತ್ತು ಸ್ಥಳದಲ್ಲಿ ಯಾವುದೇ ಅಧಿಕಾರಿಗಳು ಲಭ್ಯವಿಲ್ಲ</h4>
+                        <p>ದಯವಿಟ್ಟು ಬೇರೆ ದಿನಾಂಕ ಅಥವಾ ಸ್ಥಳವನ್ನು ಆಯ್ಕೆ ಮಾಡಿ</p>
+                    </div>
+                )}
+            </section>
 
             <section className="expert-section">
                 <h3>ತಜ್ಞರ ಮಾರ್ಗದರ್ಶನ</h3>
                 <div className="expert-grid">
-                    <button 
-                        className="expert-card"
-                        onClick={() => handleExpertNavigation('agriculture')}
-                    >
-                        <VideoCall />
-                        <p>ಕೃಷಿ ತಜ್ಞರು</p>
-                    </button>
-                    <button 
-                        className="expert-card"
-                        onClick={() => handleExpertNavigation('market')}
-                    >
-                        <VideoCall />
-                        <p>ಮಾರುಕಟ್ಟೆ ತಜ್ಞರು</p>
-                    </button>
-                    <button 
-                        className="expert-card"
-                        onClick={() => handleExpertNavigation('business')}
-                    >
-                        <VideoCall />
-                        <p>ವ್ಯಾಪಾರ ಸಲಹೆಗಾರರು</p>
-                    </button>
+                    {loadingExperts ? (
+                        <div>Loading experts...</div>
+                    ) : (
+                        experts.length > 0 ? (
+                            experts.map(expert => (
+                                <button 
+                                    key={expert.id}
+                                    className="expert-card"
+                                    onClick={() => handleExpertNavigation(expert.type)}
+                                >
+                                    <VideoCall />
+                                    <p>{expert.name}</p>
+                                </button>
+                            ))
+                        ) : (
+                            <div>No experts available</div>
+                        )
+                    )}
                 </div>
             </section>
+
             <section className="library-section">
                 <h3>ಸಂಪನ್ಮೂಲ ಗ್ರಂಥಾಲಯ</h3>
                 <div className="expert-grid">
-                   <button 
+                    <button 
                         className="expert-card"
                         onClick={() => navigate('/library/videos')}
                     >
@@ -186,7 +206,7 @@ const SkillsDevelopment = () => {
                     <button 
                         className="expert-card"
                         onClick={() => navigate('/library/articles')}
-                        >
+                    >
                         <Book />
                         <p>ದಾಖಲೆಗಳು</p>
                     </button>
@@ -206,7 +226,7 @@ const SkillsDevelopment = () => {
                     </button>
                 </div>
             </section>          
-              <BookingModal
+            <BookingModal
                 open={showBookingModal}
                 onClose={() => setShowBookingModal(false)}
                 officer={selectedOfficer}
@@ -215,4 +235,5 @@ const SkillsDevelopment = () => {
         </div>
     );
 };
+
 export default SkillsDevelopment;
